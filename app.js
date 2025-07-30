@@ -5,10 +5,10 @@ const flash = require('connect-flash');
 const multer = require('multer');
 const app = express();
 
-// Set up multer for file uploads
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'public/images'); // Directory to save uploaded files
+        cb(null, 'public/images'); 
     },
     filename: (req, file, cb) => {
         cb(null, file.originalname); 
@@ -18,10 +18,10 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const connection = mysql.createConnection({
-    host: 'c237-boss.mysql.database.azure.com',
-    user: 'c237boss',
-    password: 'c237boss!',
-    database: 'c237_005_team4'
+    host: 'localhost',
+    user: 'root',
+    password: 'Republic_C207',
+    database: 'phoenix'
   });
 
 connection.connect((err) => {
@@ -68,15 +68,15 @@ const checkAdmin = (req, res, next) => {
         return next();
     } else {
         req.flash('error', 'Access denied');
-        res.redirect('/shopping');
+        res.redirect('/browsing');
     }
 };
 
 // Middleware for form validation
 const validateRegistration = (req, res, next) => {
-    const { username, email, password, address, contact, role } = req.body;
+    const { username, email, password, contact, role } = req.body;
 
-    if (!username || !email || !password || !address || !contact || !role) {
+    if (!username || !email || !password || !contact || !role) {
         return res.status(400).send('All fields are required.');
     }
     
@@ -93,11 +93,11 @@ app.get('/',  (req, res) => {
     res.render('index', {user: req.session.user} );
 });
 
-app.get('/inventory', checkAuthenticated, checkAdmin, (req, res) => {
+app.get('/movieinventory', checkAuthenticated, checkAdmin, (req, res) => {
     // Fetch data from MySQL
-    connection.query('SELECT * FROM products', (error, results) => {
+    connection.query('SELECT * FROM movies', (error, results) => {
       if (error) throw error;
-      res.render('inventory', { products: results, user: req.session.user });
+      res.render('movieinventory', { movies: results, user: req.session.user });
     });
 });
 
@@ -107,10 +107,10 @@ app.get('/register', (req, res) => {
 
 app.post('/register', validateRegistration, (req, res) => {
 
-    const { username, email, password, address, contact, role } = req.body;
+    const { username, email, password, contact, role } = req.body;
 
-    const sql = 'INSERT INTO users (username, email, password, address, contact, role) VALUES (?, ?, SHA1(?), ?, ?, ?)';
-    connection.query(sql, [username, email, password, address, contact, role], (err, result) => {
+    const sql = 'INSERT INTO users (username, email, password, contact, role) VALUES (?, ?, SHA1(?), ?, ?)';
+    connection.query(sql, [username, email, password, contact, role], (err, result) => {
         if (err) {
             throw err;
         }
@@ -144,9 +144,9 @@ app.post('/login', (req, res) => {
             req.session.user = results[0]; 
             req.flash('success', 'Login successful!');
             if(req.session.user.role == 'user')
-                res.redirect('/shopping');
+                res.redirect('/browsing');
             else
-                res.redirect('/inventory');
+                res.redirect('/movieinventory');
         } else {
             // Invalid credentials
             req.flash('error', 'Invalid email or password.');
@@ -155,46 +155,46 @@ app.post('/login', (req, res) => {
     });
 });
 
-app.get('/shopping', checkAuthenticated, (req, res) => {
+app.get('/browsing', checkAuthenticated, (req, res) => {
     // Fetch data from MySQL
-    connection.query('SELECT * FROM products', (error, results) => {
+    connection.query('SELECT * FROM movies', (error, results) => {
         if (error) throw error;
-        res.render('shopping', { user: req.session.user, products: results });
+        res.render('browsing', { user: req.session.user, movies: results });
       });
 });
 
 app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
-    const productId = parseInt(req.params.id);
+    const movieId = parseInt(req.params.id);
     const quantity = parseInt(req.body.quantity) || 1;
 
-    connection.query('SELECT * FROM products WHERE productId = ?', [productId], (error, results) => {
+    connection.query('SELECT * FROM movies WHERE movieId = ?', [movieId], (error, results) => {
         if (error) throw error;
 
         if (results.length > 0) {
-            const product = results[0];
+            const movies = results[0];
 
             // Initialize cart in session if not exists
             if (!req.session.cart) {
                 req.session.cart = [];
             }
 
-            // Check if product already in cart
-            const existingItem = req.session.cart.find(item => item.productId === productId);
+            // Check if movie already in cart
+            const existingItem = req.session.cart.find(item => item.movieId === movieId);
             if (existingItem) {
                 existingItem.quantity += quantity;
             } else {
                 req.session.cart.push({
-                    productId: product.productId,
-                    productName: product.productName,
-                    price: product.price,
+                    movieId: movies.movieId,
+                    moviename: movies.moviename,
+                    price: movies.price,
                     quantity: quantity,
-                    image: product.image
+                    image: movies.image
                 });
             }
 
             res.redirect('/cart');
         } else {
-            res.status(404).send("Product not found");
+            res.status(404).send("movie not found");
         }
     });
 });
@@ -209,32 +209,30 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.get('/product/:id', checkAuthenticated, (req, res) => {
-  // Extract the product ID from the request parameters
-  const productId = req.params.id;
-
-  // Fetch data from MySQL based on the product ID
-  connection.query('SELECT * FROM products WHERE productId = ?', [productId], (error, results) => {
+app.get('/movie/:id', checkAuthenticated, (req, res) => {
+  const movieId = req.params.id;
+  connection.query('SELECT * FROM movies WHERE movieId = ?', [movieId], (error, results) => {
       if (error) throw error;
 
-      // Check if any product with the given ID was found
       if (results.length > 0) {
-          // Render HTML page with the product data
-          res.render('product', { product: results[0], user: req.session.user  });
+          res.render('movie', { movies: results[0], user: req.session.user  });
       } else {
-          // If no product with the given ID was found, render a 404 page or handle it accordingly
-          res.status(404).send('Product not found');
+          // If no movie with the given ID was found, render a 404 page or handle it accordingly
+          res.status(404).send('movie not found');
       }
   });
 });
 
-app.get('/addProduct', checkAuthenticated, checkAdmin, (req, res) => {
-    res.render('addProduct', {user: req.session.user } ); 
+app.get('/addmovie', checkAuthenticated, checkAdmin, (req, res) => {
+  res.render('addmovie', { 
+    user: req.session.user,
+    formData: {}  
+  }); 
 });
 
-app.post('/addProduct', upload.single('image'),  (req, res) => {
-    // Extract product data from the request body
-    const { name, quantity, price} = req.body;
+app.post('/addmovie', upload.single('image'),  (req, res) => {
+    // Extract movie data from the request body
+    const { moviename,synopsis,seatcapacity,showday,showtime,price,genre,rating,runtime,opening} = req.body;
     let image;
     if (req.file) {
         image = req.file.filename; // Save only the filename
@@ -242,76 +240,145 @@ app.post('/addProduct', upload.single('image'),  (req, res) => {
         image = null;
     }
 
-    const sql = 'INSERT INTO products (productName, quantity, price, image) VALUES (?, ?, ?, ?)';
-    // Insert the new product into the database
-    connection.query(sql , [name, quantity, price, image], (error, results) => {
+    const sql = 'INSERT INTO movies (moviename,synopsis,seatcapacity,showday,showtime,price,image,genre,rating,runtime,opening) VALUES (?, ?, ?, ?,?,?,?,?,?,?,?)';
+    // Insert the new movie into the database
+    connection.query(sql , [moviename,synopsis,seatcapacity,showday,showtime,price,image,genre,rating,runtime,opening], (error, results) => {
         if (error) {
             // Handle any error that occurs during the database operation
-            console.error("Error adding product:", error);
-            res.status(500).send('Error adding product');
+            console.error("Error adding movie:", error);
+            res.status(500).send('Error adding movie');
         } else {
             // Send a success response
-            res.redirect('/inventory');
+            res.redirect('/movieinventory');
         }
     });
 });
 
-app.get('/updateProduct/:id',checkAuthenticated, checkAdmin, (req,res) => {
-    const productId = req.params.id;
-    const sql = 'SELECT * FROM products WHERE productId = ?';
+app.get('/updatemovie/:id',checkAuthenticated, checkAdmin, (req,res) => {
+    const movieId = req.params.id;
+    const sql = 'SELECT * FROM movies WHERE movieId = ?';
 
-    // Fetch data from MySQL based on the product ID
-    connection.query(sql , [productId], (error, results) => {
+    // Fetch data from MySQL based on the movie ID
+    connection.query(sql , [movieId], (error, results) => {
         if (error) throw error;
 
-        // Check if any product with the given ID was found
+        // Check if any movie with the given ID was found
         if (results.length > 0) {
-            // Render HTML page with the product data
-            res.render('updateProduct', { product: results[0] });
+            // Render HTML page with the movie data
+            res.render('updatemovie', { movies: results[0] });
         } else {
-            // If no product with the given ID was found, render a 404 page or handle it accordingly
-            res.status(404).send('Product not found');
+            // If no movie with the given ID was found, render a 404 page or handle it accordingly
+            res.status(404).send('movie not found');
         }
     });
 });
 
-app.post('/updateProduct/:id', upload.single('image'), (req, res) => {
-    const productId = req.params.id;
-    // Extract product data from the request body
-    const { name, quantity, price } = req.body;
-    let image  = req.body.currentImage; //retrieve current image filename
-    if (req.file) { //if new image is uploaded
-        image = req.file.filename; // set image to be new image filename
+app.post('/updatemovie/:id', upload.single('image'), (req, res) => {
+    const movieId = req.params.id;
+    const { moviename,synopsis,seatcapacity,showday,showtime,price,genre,rating,runtime,opening} = req.body;
+    let image  = req.body.currentImage; 
+    if (req.file) { 
+        image = req.file.filename; 
     } 
 
-    const sql = 'UPDATE products SET productName = ? , quantity = ?, price = ?, image =? WHERE productId = ?';
-    // Insert the new product into the database
-    connection.query(sql, [name, quantity, price, image, productId], (error, results) => {
+    const sql = 'UPDATE movies SET moviename =?,synopsis=?,seatcapacity=?,showday=?,showtime=?,price=?,image=?,genre=?,rating=?,runtime=?,opening=? WHERE movieId = ?';
+    // Insert the new movie into the database
+    connection.query(sql, [moviename,synopsis,seatcapacity,showday,showtime,price,image,genre,rating,runtime,opening, movieId], (error, results) => {
         if (error) {
             // Handle any error that occurs during the database operation
-            console.error("Error updating product:", error);
-            res.status(500).send('Error updating product');
+            console.error("Error updating movie:", error);
+            res.status(500).send('Error updating movie');
         } else {
             // Send a success response
-            res.redirect('/inventory');
+            res.redirect('/movieinventory');
         }
     });
 });
 
-app.get('/deleteProduct/:id', (req, res) => {
-    const productId = req.params.id;
+app.get('/deletemovie/:id', (req, res) => {
+    const movieId = req.params.id;
 
-    connection.query('DELETE FROM products WHERE productId = ?', [productId], (error, results) => {
+    connection.query('DELETE FROM movies WHERE movieId = ?', [movieId], (error, results) => {
         if (error) {
             // Handle any error that occurs during the database operation
-            console.error("Error deleting product:", error);
-            res.status(500).send('Error deleting product');
+            console.error("Error deleting movie:", error);
+            res.status(500).send('Error deleting movie');
         } else {
             // Send a success response
-            res.redirect('/inventory');
+            res.redirect('/movieinventory');
         }
     });
 });
+
+app.post("/checkout", (req, res) => {
+  const cart = req.session.cart || [];
+  const user = req.session.user;
+
+  if (!user) return res.redirect("/login");
+  if (cart.length === 0) return res.send("Your cart is empty.");
+
+  let finalCart = [];
+  let processed = 0;
+
+  cart.forEach((item) => {
+    connection.query(
+      "SELECT seatcapacity, showday, showtime FROM movies WHERE movieId = ?",
+      [item.movieId],
+      (err, results) => {
+        if (err) {
+          console.error("Error fetching movie:", err.message);
+          return res.status(500).send("Error during checkout.");
+        }
+
+        const movie = results[0];
+
+        if (!movie) {
+          processed++;
+          if (processed === cart.length) finishCheckout();
+          return;
+        }
+
+        if (movie.seatcapacity >= item.quantity) {
+          connection.query(
+            "UPDATE movies SET seatcapacity = seatcapacity - ? WHERE movieId = ?",
+            [item.quantity, item.movieId],
+            (err) => {
+              if (err) {
+                console.error("Error updating seatcapacity:", err.message);
+              }
+
+              movie.soldOut = false;
+              movie.quantity = item.quantity;
+              movie.price = item.price;
+              movie.total = item.price * item.quantity;
+              movie.name = item.moviename || item.movieName;
+
+              finalCart.push(movie);
+              processed++;
+              if (processed === cart.length) finishCheckout();
+            }
+          );
+        } else {
+          movie.soldOut = true;
+          movie.quantity = 0;
+          movie.price = item.price;
+          movie.total = 0;
+          movie.name = item.moviename || item.movieName;
+
+          finalCart.push(movie);
+          processed++;
+          if (processed === cart.length) finishCheckout();
+        }
+      }
+    );
+  });
+
+  function finishCheckout() {
+    req.session.cart = [];
+    res.render("receipt", { cart: finalCart });
+  }
+});
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

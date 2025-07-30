@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phoenix</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .navbar {
+      background-color: #000 !important;
+    }
+
+    .navbar-brand,
+    .navbar-nav .nav-link {
+      color: #ff5722 !important;
+      font-weight: bold;
+    }
+
+    .navbar-nav .nav-link:hover {
+      text-decoration: underline;
+    }
+
+    h2 {
+      color: #ff5722;
+      margin-top: 30px;
+    }
+
+    .carousel-container {
+      position: relative;
+    }
+
+    .carousel-wrapper {
+      display: flex;
+      overflow-x: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-behavior: smooth;
+    }
+
+    .movie-card {
+      flex: 0 0 100%;
+      max-width: 100%;
+      scroll-snap-align: start;
+      background-color: #1c1c1c;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(255, 87, 34, 0.4);
+      display: flex;
+      overflow: hidden;
+      margin-bottom: 40px;
+    }
+
+    .movie-card img {
+      width: 300px;
+      object-fit: cover;
+    }
+
+    .movie-details {
+      padding: 30px;
+      flex-grow: 1;
+    }
+
+    .movie-title {
+      color: #ff5722;
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .movie-meta p {
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
+    .form-control {
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    .form-control:focus {
+      border-color: #ff5722;
+    }
+
+    .btn-primary {
+      background-color: #ff5722;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background-color: #e64a19;
+    }
+
+    a {
+      color: #ff5722;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .quantity-buy {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 20px;
+    }
+
+    .carousel-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background-color: rgba(0, 0, 0, 0.5);
+      color: #ff5722;
+      border: none;
+      font-size: 2rem;
+      padding: 10px 16px;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    .arrow-left {
+      left: 0;
+    }
+
+    .arrow-right {
+      right: 0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-sm navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand d-flex align-items-center" href="/">
+        <img src="/images/phoenix.png" alt="Phoenix Logo" width="32" height="32" />
+        Phoenix
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#collapsibleNavbar">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="collapsibleNavbar">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link" href="/cart">View Cart</a></li>
+          <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <p class="navbar-brand">Welcome, <%= user.username %> (<%= user.role %>)</p>
+    <div class="text-center">
+      <h2>Now Showing</h2>
+    </div>
+
+    <div class="carousel-container mt-4 position-relative">
+      <button class="carousel-arrow arrow-left" onclick="scrollCarousel(-1)">&#10094;</button>
+      <div class="carousel-wrapper" id="carousel">
+        <% for(let i = 0; i < movies.length; i++) { %>
+          <div class="movie-card">
+            <img src="images/<%= movies[i].image %>" alt="<%= movies[i].moviename %> Poster">
+            <div class="movie-details">
+              <div class="movie-title">
+                <a href="/movie/<%= movies[i].movieId %>"><%= movies[i].moviename %></a>
+              </div>
+              <div class="movie-meta">
+                <p>Genre: <%= movies[i].genre %></p>
+                <p>Rating: <%= movies[i].rating %></p>
+                <p>Runtime: <%= movies[i].runtime %></p>
+                <p>Opening: <%= new Date(movies[i].opening).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
+                <p>Show Day: <%= new Date(movies[i].showday).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></p>
+                <p>Show Time: <%= new Date("1970-01-01T" + movies[i].showtime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) %></p>
+                <p>Seats: <%= movies[i].seatcapacity %></p>
+                <p>Price: $<%= movies[i].price.toFixed(2) %></p>
+                <p>Synopsis: <%= movies[i].synopsis %></p>
+              </div>
+              <div class="quantity-buy">
+                <select class="form-control w-auto"
+                        onchange="document.getElementById('quantity-<%= movies[i].movieId %>').value = this.value">
+                  <% for (let q = 1; q <= 5; q++) { %>
+                    <option value="<%= q %>"><%= q %></option>
+                  <% } %>
+                </select>
+                <form action="/add-to-cart/<%= movies[i].movieId %>" method="POST" class="d-inline">
+                  <input type="hidden" name="quantity" id="quantity-<%= movies[i].movieId %>" value="1">
+                  <button type="submit" class="btn btn-primary">Buy</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+      <button class="carousel-arrow arrow-right" onclick="scrollCarousel(1)">&#10095;</button>
+    </div>
+  </div>
+
+  <script>
+    function scrollCarousel(direction) {
+      const carousel = document.getElementById('carousel');
+      const cardWidth = carousel.querySelector('.movie-card').offsetWidth;
+      carousel.scrollBy({ left: direction * cardWidth, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
